@@ -3,42 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-  <title>Solar System with A-Frame</title>
+  <title>Galaxy Explorer</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+    
+    #ui-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    #navigation {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+    
+    .nav-button {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: 2px solid #4CAF50;
+      padding: 10px 20px;
+      margin: 0 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+    
+    .nav-button:hover {
+      background: rgba(76,175,80,0.8);
+    }
+    
+    #info-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 300px;
+      display: none;
+    }
+    
+    .star-cluster {
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .star-cluster:hover {
+      scale: 1.2;
+    }
+    
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 24px;
+      z-index: 1000;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <a-scene>
+  <div id="ui-overlay">
+    <h2 id="view-title">Galaxy Explorer</h2>
+    <p id="view-description">Click on star clusters to explore solar systems</p>
+  </div>
+  
+  <div id="navigation">
+    <button class="nav-button" onclick="showGalaxyView()">Galaxy View</button>
+    <button class="nav-button" onclick="showOurSolarSystem()">Our Solar System</button>
+  </div>
+  
+  <div id="info-panel">
+    <h3 id="info-title">System Information</h3>
+    <div id="info-content"></div>
+  </div>
+  
+  <div id="loading">Generating Solar System...</div>
 
-    <!-- Sky  -->
-    <a-sky src = "textures/nightsky.jpg"></a-sky>
+  <a-scene id="main-scene">
+    <!-- Galaxy View -->
+    <a-sky id="galaxy-sky" src="textures/nightsky.jpg"></a-sky>
     
-    <!-- Sun -->
-    <a-sphere id="sun" position="0 1.25 -5" radius="3" src="textures/sun.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 22224"></a-sphere>
-
-    <!-- Mercury -->
-    <a-sphere id="mercury" position="3.9 1.25 -5" radius="0.1" src="textures/mercury.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 58650"></a-sphere>
-
-    <!-- Venus -->
-    <a-sphere id="venus" position="7.2 1.25 -5" radius="0.2" src="textures/venus.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 243000"></a-sphere>
-
-    <!-- Earth -->
-    <a-sphere id="earth" position="10 1.25 -5" radius="0.3" src="textures/earth.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 864"></a-sphere>
-
-    <!-- Mars -->
-    <a-sphere id="mars" position="15.2 1.25 -5" radius="0.2" src="textures/mars.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 8864"></a-sphere>
-
-    <!-- Jupiter -->
-    <a-sphere id="jupiter" position="52 1.25 -5" radius="1.5" src="textures/jupiter.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 3528"></a-sphere>
-
-    <!-- Saturn -->
-    <a-sphere id="saturn" position="95 1.25 -5" radius="1.2" src="textures/saturn.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 3952"></a-sphere>
-
-    <!-- Uranus -->
-    <a-sphere id="uranus" position="192 1.25 -5" radius="0.7" src="textures/uranus.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 60480"></a-sphere>
-
-    <!-- Neptune -->
-    <a-sphere id="neptune" position="301 1.25 -5" radius="0.7" src="textures/neptune.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 54720"></a-sphere>
-
+    <!-- Star Clusters for Galaxy View -->
+    <a-entity id="star-clusters">
+      <!-- These will be generated dynamically -->
+    </a-entity>
+    
+    <!-- Our Solar System (Special) -->
+    <a-entity id="our-solar-system" position="0 0 -20" visible="false">
+      <a-sphere id="sun" position="0 1.25 -5" radius="3" src="textures/sun.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 22224"></a-sphere>
+      <a-sphere id="mercury" position="3.9 1.25 -5" radius="0.1" src="textures/mercury.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 58650"></a-sphere>
+      <a-sphere id="venus" position="7.2 1.25 -5" radius="0.2" src="textures/venus.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 243000"></a-sphere>
+      <a-sphere id="earth" position="10 1.25 -5" radius="0.3" src="textures/earth.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 864"></a-sphere>
+      <a-sphere id="mars" position="15.2 1.25 -5" radius="0.2" src="textures/mars.jpeg" rotation="0 0 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 8864"></a-sphere>
+      <a-sphere id="jupiter" position="52 1.25 -5" radius="1.5" src="textures/jupiter.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 3528"></a-sphere>
+      <a-sphere id="saturn" position="95 1.25 -5" radius="1.2" src="textures/saturn.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 3952"></a-sphere>
+      <a-sphere id="uranus" position="192 1.25 -5" radius="0.7" src="textures/uranus.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 60480"></a-sphere>
+      <a-sphere id="neptune" position="301 1.25 -5" radius="0.7" src="textures/neptune.jpeg" rotation="0 360 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 54720"></a-sphere>
+      
+      <!-- US Label -->
+      <a-text value="US" position="0 3 -5" color="yellow" align="center" scale="2 2 2"></a-text>
+      <a-entity position="0 2.5 -5">
+        <a-cone height="0.5" radius-bottom="0.2" radius-top="0" color="yellow"></a-cone>
+      </a-entity>
+    </a-entity>
+    
+    <!-- Generated Solar Systems Container -->
+    <a-entity id="generated-systems"></a-entity>
+    
+    <!-- Camera -->
+    <a-camera position="0 0 5" look-controls="enabled: true">
+      <a-cursor color="#4CAF50"></a-cursor>
+    </a-camera>
   </a-scene>
+
+  <script>
+    // Global state
+    let currentView = 'galaxy';
+    let generatedSystems = [];
+    let systemCounter = 0;
+    
+    // Planet types and their properties
+    const planetTypes = {
+      rocky: { colors: ['#8B4513', '#CD853F', '#A0522D', '#8B7355'], sizeRange: [0.1, 0.4] },
+      gas: { colors: ['#FFD700', '#FFA500', '#FF6347', '#FF4500'], sizeRange: [0.8, 2.0] },
+      ice: { colors: ['#87CEEB', '#4682B4', '#4169E1', '#1E90FF'], sizeRange: [0.3, 0.8] }
+    };
+    
+    // Initialize the galaxy
+    function initGalaxy() {
+      const starClusters = document.getElementById('star-clusters');
+      starClusters.innerHTML = '';
+      
+      // Generate random star clusters
+      for (let i = 0; i < 50; i++) {
+        const x = (Math.random() - 0.5) * 100;
+        const y = (Math.random() - 0.5) * 50;
+        const z = -50 - Math.random() * 100;
+        
+        const cluster = document.createElement('a-entity');
+        cluster.setAttribute('position', `${x} ${y} ${z}`);
+        cluster.setAttribute('class', 'star-cluster');
+        cluster.setAttribute('data-system-id', i);
+        
+        // Create star cluster visual
+        const starCount = 3 + Math.floor(Math.random() * 8);
+        for (let j = 0; j < starCount; j++) {
+          const star = document.createElement('a-sphere');
+          const starX = (Math.random() - 0.5) * 2;
+          const starY = (Math.random() - 0.5) * 2;
+          const starZ = (Math.random() - 0.5) * 2;
+          
+          star.setAttribute('position', `${starX} ${starY} ${starZ}`);
+          star.setAttribute('radius', 0.05 + Math.random() * 0.1);
+          star.setAttribute('color', `hsl(${Math.random() * 60 + 30}, 100%, 70%)`);
+          star.setAttribute('animation', `property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: ${1000 + Math.random() * 2000}`);
+          
+          cluster.appendChild(star);
+        }
+        
+        // Add click handler
+        cluster.addEventListener('click', () => generateSolarSystem(i));
+        starClusters.appendChild(cluster);
+      }
+    }
+    
+    // Generate a solar system using procedural generation
+    function generateSolarSystem(systemId) {
+      document.getElementById('loading').style.display = 'block';
+      
+      setTimeout(() => {
+        const systemContainer = document.createElement('a-entity');
+        systemContainer.setAttribute('id', `system-${systemId}`);
+        systemContainer.setAttribute('position', '0 0 -20');
+        systemContainer.setAttribute('visible', 'true');
+        
+        // Generate sun
+        const sunRadius = 2 + Math.random() * 2;
+        const sunColor = `hsl(${Math.random() * 60 + 20}, 100%, 60%)`;
+        const sun = document.createElement('a-sphere');
+        sun.setAttribute('position', '0 1.25 -5');
+        sun.setAttribute('radius', sunRadius);
+        sun.setAttribute('color', sunColor);
+        sun.setAttribute('animation', `property: rotation; to: 0 360 0; loop: true; dur: ${20000 + Math.random() * 10000}`);
+        
+        systemContainer.appendChild(sun);
+        
+        // Generate planets
+        const planetCount = 3 + Math.floor(Math.random() * 8);
+        let currentDistance = sunRadius + 2;
+        
+        for (let i = 0; i < planetCount; i++) {
+          const planetType = Object.keys(planetTypes)[Math.floor(Math.random() * 3)];
+          const planetProps = planetTypes[planetType];
+          const planetColor = planetProps.colors[Math.floor(Math.random() * planetProps.colors.length)];
+          const planetSize = planetProps.sizeRange[0] + Math.random() * (planetProps.sizeRange[1] - planetProps.sizeRange[0]);
+          
+          const planet = document.createElement('a-sphere');
+          planet.setAttribute('position', `${currentDistance} 1.25 -5`);
+          planet.setAttribute('radius', planetSize);
+          planet.setAttribute('color', planetColor);
+          planet.setAttribute('class', 'planet');
+          planet.setAttribute('data-planet-info', JSON.stringify({
+            type: planetType,
+            size: planetSize,
+            distance: currentDistance,
+            color: planetColor
+          }));
+          
+          // Add orbital animation
+          const orbitalPeriod = 5000 + Math.random() * 20000;
+          planet.setAttribute('animation', `property: position; to: ${currentDistance} 1.25 -5; loop: true; dur: ${orbitalPeriod}`);
+          
+          // Add rotation animation
+          const rotationPeriod = 1000 + Math.random() * 5000;
+          planet.setAttribute('animation__rotation', `property: rotation; to: 0 360 0; loop: true; dur: ${rotationPeriod}`);
+          
+          systemContainer.appendChild(planet);
+          
+          // Add click handler for planet info
+          planet.addEventListener('click', (event) => {
+            event.stopPropagation();
+            showPlanetInfo(planet.getAttribute('data-planet-info'));
+          });
+          
+          currentDistance += planetSize * 3 + Math.random() * 5;
+        }
+        
+        // Hide other views
+        document.getElementById('our-solar-system').setAttribute('visible', 'false');
+        document.getElementById('star-clusters').setAttribute('visible', 'false');
+        
+        // Add to generated systems
+        document.getElementById('generated-systems').appendChild(systemContainer);
+        generatedSystems.push(systemId);
+        
+        // Update UI
+        document.getElementById('view-title').textContent = `Solar System ${systemId}`;
+        document.getElementById('view-description').textContent = 'Click on planets for information';
+        currentView = 'generated-system';
+        
+        document.getElementById('loading').style.display = 'none';
+      }, 1000);
+    }
+    
+    // Show planet information
+    function showPlanetInfo(planetData) {
+      const infoPanel = document.getElementById('info-panel');
+      const infoTitle = document.getElementById('info-title');
+      const infoContent = document.getElementById('info-content');
+      
+      infoTitle.textContent = `${planetData.type.charAt(0).toUpperCase() + planetData.type.slice(1)} Planet`;
+      infoContent.innerHTML = `
+        <p><strong>Type:</strong> ${planetData.type}</p>
+        <p><strong>Size:</strong> ${planetData.size.toFixed(2)} units</p>
+        <p><strong>Distance from Sun:</strong> ${planetData.distance.toFixed(1)} units</p>
+        <p><strong>Color:</strong> <span style="color: ${planetData.color}">${planetData.color}</span></p>
+      `;
+      
+      infoPanel.style.display = 'block';
+    }
+    
+    // Show galaxy view
+    function showGalaxyView() {
+      document.getElementById('galaxy-sky').setAttribute('visible', 'true');
+      document.getElementById('star-clusters').setAttribute('visible', 'true');
+      document.getElementById('our-solar-system').setAttribute('visible', 'false');
+      
+      // Hide all generated systems
+      generatedSystems.forEach(id => {
+        const system = document.getElementById(`system-${id}`);
+        if (system) system.setAttribute('visible', 'false');
+      });
+      
+      document.getElementById('view-title').textContent = 'Galaxy Explorer';
+      document.getElementById('view-description').textContent = 'Click on star clusters to explore solar systems';
+      document.getElementById('info-panel').style.display = 'none';
+      currentView = 'galaxy';
+    }
+    
+    // Show our solar system
+    function showOurSolarSystem() {
+      document.getElementById('galaxy-sky').setAttribute('visible', 'false');
+      document.getElementById('star-clusters').setAttribute('visible', 'false');
+      document.getElementById('our-solar-system').setAttribute('visible', 'true');
+      
+      // Hide all generated systems
+      generatedSystems.forEach(id => {
+        const system = document.getElementById(`system-${id}`);
+        if (system) system.setAttribute('visible', 'false');
+      });
+      
+      document.getElementById('view-title').textContent = 'Our Solar System';
+      document.getElementById('view-description').textContent = 'The real solar system with Earth and other planets';
+      document.getElementById('info-panel').style.display = 'none';
+      currentView = 'our-system';
+    }
+    
+    // Initialize when scene is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      initGalaxy();
+    });
+    
+    // Add click handler to hide info panel when clicking elsewhere
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#info-panel') && !event.target.closest('.planet')) {
+        document.getElementById('info-panel').style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
